@@ -1,0 +1,51 @@
+{
+  "name": "synapto",
+  "private": true,
+  "version": "4.2.0-Alpha",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "start": "node server.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^1.52.0",
+    "@mediapipe/tasks-vision": "^0.10.35",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@react-three/postprocessing": "^3.0.4",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "axios": "^1.6.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.22.1",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.0.2",
+    "lucide-react": "^0.546.0",
+    "mammoth": "^1.6.0",
+    "motion": "^12.23.24",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "postprocessing": "^6.39.1",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "react-error-boundary": "^6.1.1",
+    "sql.js": "^1.14.1",
+    "three": "^0.184.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/multer": "^1.4.13",
+    "@types/node": "^22.14.0",
+    "@types/sql.js": "^1.4.11",
+    "@types/three": "^0.184.1",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}

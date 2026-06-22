@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and accessibility preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string", "enum": ["light", "dark", "high-contrast"] },
+            "dyslexiaFont": { "type": "boolean" },
+            "fontSize": { "type": "number" },
+            "focusMode": { "type": "boolean" },
+            "highContrast": { "type": "boolean" },
+            "speechRate": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "preferences"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Processed lesson content from YouTube",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "simplifiedContent": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "videoUrl", "authorId"]
+    },
+    "TranscriptSegment": {
+      "title": "Transcript Segment",
+      "description": "Timed transcript segment with sign language animation metadata",
+      "type": "object",
+      "properties": {
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "text": { "type": "string" },
+        "signAnimation": { "type": "string" }
+      },
+      "required": ["startTime", "endTime", "text"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/lessons/{lessonId}": {
+      "schema": "Lesson",
+      "description": "Processed lessons"
+    },
+    "/lessons/{lessonId}/transcripts/{segmentId}": {
+      "schema": "TranscriptSegment",
+      "description": "Segments for a specific lesson"
+    }
+  }
+}

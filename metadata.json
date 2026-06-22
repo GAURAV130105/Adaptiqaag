@@ -1,0 +1,6 @@
+{
+  "name": "Synapto",
+  "description": "A unified, AI-powered inclusive education platform that dynamically adapts content to cognitive and sensory needs using adaptive UI, YouTube sync, and 3D sign language avatars.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}
