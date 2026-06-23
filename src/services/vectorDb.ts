@@ -4,7 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '../../rag_vectors.db');
+const dbPath = process.env.VERCEL
+  ? path.join(process.cwd(), 'rag_vectors.db')
+  : path.join(__dirname, '../../rag_vectors.db');
 
 export interface DocumentChunk {
   id: string;
