@@ -12,12 +12,10 @@ import { UserGestureRecognizer } from './components/UserGestureRecognizer';
 import { SynaptoChat } from './components/SynaptoChat';
 import { ViewModeToggle } from './components/ViewModeToggle';
 import { TranslatePanel } from './components/TranslatePanel';
-import { LoginPage } from './components/LoginPage';
 import { aiService } from './services/aiService';
 import { synaptoService } from './services/synaptoService';
-import { auth, googleProvider, signInWithPopup, onAuthStateChanged } from './lib/firebase';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { Search, Loader2, LogIn, LogOut, AlertCircle, Waves, Languages } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Search, Loader2, AlertCircle, Waves, Languages } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -38,7 +36,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetError
 }
 
 export default function App() {
-  const { setVideo, setTranscript, settings, user, setUser, syncSettings, isLoading, videoUrl, viewMode, translateMode, setTranslateMode, currentSegment, isPlaying } = useStore();
+  const { setVideo, setTranscript, settings, videoUrl, viewMode, translateMode, setTranslateMode, currentSegment, isPlaying } = useStore();
   const [url, setUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchResults, setSearchResults] = useState<{videoId: string; title: string; description: string; thumbnail: string}[]>([]);
@@ -166,42 +164,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        syncSettings();
-      }
-    });
-
-    // Fallback: If auth doesn't respond in 5 seconds, clear loading state anyway
-    const timer = setTimeout(() => {
-      useStore.getState().setIsLoading(false);
-    }, 5000);
-
     // No default video — wait for user to search or paste a link
-
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
   }, []);
-
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      console.error("Login failed", err);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      window.history.pushState({}, '', '/');
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
 
     const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -239,23 +203,7 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-main">
-        <Loader2 className="h-10 w-10 animate-spin text-accent" />
-      </div>
-    );
-  }
 
-  if (!user) {
-    return (
-      <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-        <AdaptiveThemeProvider>
-          <LoginPage />
-        </AdaptiveThemeProvider>
-      </ErrorBoundary>
-    );
-  }
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
@@ -284,32 +232,9 @@ export default function App() {
             </div>
 
               <div className="flex items-center gap-8 focus-hide">
-                {user && !settings.focusMode && (
-                  <div className="flex items-center gap-3 pr-2 border-r border-neutral-200 dark:border-white/10">
-                    {user.photoURL ? (
-                      <img
-                        src={user.photoURL}
-                        alt={user.displayName || 'User'}
-                        className="h-9 w-9 rounded-full border border-accent/20"
-                      />
-                    ) : (
-                      <div className="h-9 w-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-[10px] font-black uppercase tracking-[0.1em] text-accent">
-                        {user.email?.[0] || 'U'}
-                      </div>
-                    )}
-                    <div className="flex flex-col text-left mr-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.05em] leading-none mb-0.5">
-                        {user.displayName || 'Learner'}
-                      </span>
-                      <span className="text-[9px] opacity-40 leading-none">
-                        {user.email}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {!settings.focusMode && (
-                  <button
-                    onClick={() => window.open('https://kozha-translate.com/app.html', '_blank')}
+              {!settings.focusMode && (
+                <button
+                  onClick={() => window.open('https://kozha-translate.com/app.html', '_blank')}
                   className={`flex items-center gap-2 rounded-2xl border-2 px-5 py-2.5 font-black uppercase text-[9px] tracking-[0.15em] transition-all shadow-sm ${
                     settings.theme === 'dark'
                       ? 'border-white/10 bg-white/5 text-white hover:bg-accent/20 hover:border-accent/30'
@@ -321,19 +246,6 @@ export default function App() {
                 </button>
               )}
               {!settings.focusMode && !translateMode && <ViewModeToggle />}
-              {!settings.focusMode && (
-                <button
-                  onClick={handleLogout}
-                  className={`flex items-center gap-2 rounded-2xl border-2 px-5 py-2.5 font-black uppercase text-[9px] tracking-[0.15em] transition-all shadow-sm ${
-                    settings.theme === 'dark'
-                      ? 'border-white/10 bg-white/5 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400'
-                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
-                  }`}
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Logout
-                </button>
-              )}
               {!settings.focusMode && (
                 <form onSubmit={handleSearch} className="flex gap-4">
                   <div className="relative group">
