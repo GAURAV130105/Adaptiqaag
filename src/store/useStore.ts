@@ -1,15 +1,7 @@
 import { create } from 'zustand';
 import { AppState, AccessibilitySettings, TranscriptSegment, TranslateGloss, TranslateSettings } from '../types';
-import { auth, db, handleFirestoreError, OperationType, serverTimestamp } from '../lib/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { User } from 'firebase/auth';
 
 interface ExtendedAppState extends AppState {
-  user: User | null;
-  setUser: (user: User | null) => void;
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
-  syncSettings: () => Promise<void>;
   seekTime: number | null;
   seekTo: (time: number) => void;
   // Translate mode
@@ -37,11 +29,6 @@ interface ExtendedAppState extends AppState {
 }
 
 export const useStore = create<ExtendedAppState>((set, get) => ({
-  user: null,
-  isLoading: true,
-  setUser: (user) => set({ user, isLoading: false }),
-  setIsLoading: (loading) => set({ isLoading: loading }),
-
   // UI Settings
   settings: {
     theme: 'light',
@@ -57,50 +44,10 @@ export const useStore = create<ExtendedAppState>((set, get) => ({
     signLanguageMode: false,
   },
 
-  updateSettings: async (newSettings) => {
+  updateSettings: (newSettings) => {
     set((state) => ({
       settings: { ...state.settings, ...newSettings }
     }));
-
-    const { user, settings } = get();
-    if (user) {
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, {
-          preferences: settings,
-          updatedAt: serverTimestamp()
-        });
-      } catch (error) {
-        console.warn("Firestore sync failed:", error);
-      }
-    }
-  },
-
-  syncSettings: async () => {
-    const { user } = get();
-    if (!user) return;
-
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        set({ settings: data.preferences });
-      } else {
-        // Initialize user document
-        const initialData = {
-          uid: user.uid,
-          email: user.email,
-          preferences: get().settings,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
-        await setDoc(userRef, initialData);
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${user?.uid}`);
-    }
   },
 
   toggleFocusMode: () => {

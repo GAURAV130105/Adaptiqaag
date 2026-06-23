@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Upload, X, Trash2, File, Check, AlertCircle } from 'lucide-react';
-import { auth } from '../lib/firebase';
+
 
 interface Document {
   id: string;
@@ -23,14 +23,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess,
 
   const fetchDocuments = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      const response = await fetch('/api/documents', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch('/api/documents');
       const data = await response.json();
       setDocuments(data.documents || []);
     } catch (error) {
@@ -70,14 +63,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess,
     formData.append('file', file);
 
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Not authenticated');
-      const token = await user.getIdToken();
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData,
       });
 
@@ -107,14 +94,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess,
 
   const handleDelete = async (docId: string) => {
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Not authenticated');
-      const token = await user.getIdToken();
       const response = await fetch(`/api/documents/${docId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        method: 'DELETE'
       });
 
       if (!response.ok) {

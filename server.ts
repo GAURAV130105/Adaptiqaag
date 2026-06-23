@@ -3,19 +3,13 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import multer from "multer";
-import admin from "firebase-admin";
 import { ragService } from "./src/services/ragService.ts";
 import { documentProcessor } from "./src/services/documentProcessor.ts";
 import { vectorDb } from "./src/services/vectorDb.ts";
 import { fileURLToPath } from "url";
-import firebaseConfig from "./firebase-applet-config.json";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  projectId: firebaseConfig.projectId
-});
 
 // Multer upload config with 10MB limit and PDF/TXT/DOCX file filter
 const upload = multer({
@@ -38,23 +32,6 @@ const upload = multer({
   }
 });
 
-// Middleware to verify Firebase ID Token
-async function verifyFirebaseToken(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
-  }
-
-  const token = authHeader.split("Bearer ")[1];
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    (req as any).user = decodedToken;
-    next();
-  } catch (error) {
-    console.error("Firebase token verification failed:", error);
-    return res.status(401).json({ error: "Unauthorized: Token verification failed" });
-  }
-}
 
 async function startServer() {
   const app = express();
@@ -65,12 +42,12 @@ async function startServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", grokConfigured: !!(process.env.GROQ_API_KEY || process.env.GROK_API_KEY) });
+    res.json({ 
+      status: "ok", 
+      groqConfigured: !!process.env.GROQ_API_KEY,
+      grokConfigured: !!process.env.GROQ_API_KEY 
+    });
   });
-
-  // Protect all API endpoints below with Firebase Token authentication
-  app.use("/api/chat", verifyFirebaseToken);
-  app.use("/api/documents", verifyFirebaseToken);
 
   // RAG Query endpoint
   app.post("/api/chat/rag", async (req, res) => {

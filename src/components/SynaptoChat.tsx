@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { synaptoService, SynaptoMessage } from '../services/synaptoService';
 import { aiService } from '../services/aiService';
 import { DocumentUpload } from './DocumentUpload';
-import { auth } from '../lib/firebase';
+
 
 const SynaptoLogo: React.FC<{ size?: 'sm' | 'md' | 'lg', highContrast?: boolean }> = ({ size = 'md', highContrast }) => {
   const dimensions = {
@@ -55,7 +55,7 @@ export const SynaptoChat: React.FC = () => {
   }, [isListening]);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const { currentSegment, transcript, settings, setVideo, setTranscript, setIsLoading, ragEnabled, grokConfigured, setGrokConfigured } = useStore();
+  const { currentSegment, transcript, settings, setVideo, setTranscript, ragEnabled, grokConfigured, setGrokConfigured } = useStore();
 
   // Validate API key the first time the chat is opened
   useEffect(() => {
@@ -67,7 +67,7 @@ export const SynaptoChat: React.FC = () => {
       fetch('/api/health')
         .then(res => res.json())
         .then(data => {
-          if (data && data.grokConfigured) {
+          if (data && (data.grokConfigured || data.groqConfigured)) {
             // Groq RAG is configured and ready on backend!
             setGrokConfigured(true);
             setApiStatus('ok');
@@ -253,7 +253,6 @@ export const SynaptoChat: React.FC = () => {
   };
 
   const handleVideoSelection = React.useCallback(async (videoUrl: string) => {
-    setIsLoading(true);
     try {
       const transcriptData = await aiService.processVideoContent(videoUrl);
       const videoId = videoUrl.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1] || "unknown";
@@ -266,10 +265,8 @@ export const SynaptoChat: React.FC = () => {
       }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'model', text: "I had some trouble loading the interpretation for that video. Let's try another one." }]);
-    } finally {
-      setIsLoading(false);
     }
-  }, [setVideo, setTranscript, setIsLoading]);
+  }, [setVideo, setTranscript]);
 
   const handleSend = React.useCallback(async (e?: React.FormEvent, overrideText?: string) => {
     if (e) e.preventDefault();
@@ -363,16 +360,11 @@ export const SynaptoChat: React.FC = () => {
               userContext = `Current video segment: "${currentSegment.text}"`;
             }
 
-            // Get Firebase ID token
-            const firebaseUser = auth.currentUser;
-            const token = firebaseUser ? await firebaseUser.getIdToken() : '';
-
             // Call RAG endpoint
             const ragResponse = await fetch('/api/chat/rag', {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
                 message: userText,
@@ -413,9 +405,8 @@ export const SynaptoChat: React.FC = () => {
       setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
     } finally {
       setIsTyping(false);
-      setIsLoading(false);
     }
-  }, [input, isTyping, messages, currentSegment, transcript, handleVideoSelection, setIsLoading, ragEnabled]);
+  }, [input, isTyping, messages, currentSegment, transcript, handleVideoSelection, ragEnabled]);
 
   const clearHistory = () => setMessages([]);
 
@@ -520,7 +511,7 @@ export const SynaptoChat: React.FC = () => {
                           fetch('/api/health')
                             .then(res => res.json())
                             .then(data => {
-                              if (data && data.grokConfigured) {
+                              if (data && (data.grokConfigured || data.groqConfigured)) {
                                 setGrokConfigured(true);
                                 setApiStatus('ok');
                               } else {
