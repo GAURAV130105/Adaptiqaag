@@ -1,32 +1,17 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "rag_vectors.db",
-          "../rag_vectors.db"
-        ]
-      }
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": [
+        "rag_vectors.db",
+        "node_modules/sql.js/dist/sql-wasm.wasm"
+      ]
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

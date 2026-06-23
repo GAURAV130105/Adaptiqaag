@@ -15,11 +15,17 @@ interface ProcessedDocument {
 }
 
 class DocumentProcessor {
-  private uploadDir = path.join(process.cwd(), 'uploads');
+  private uploadDir = process.env.VERCEL
+    ? '/tmp/uploads'
+    : path.join(process.cwd(), 'uploads');
 
   constructor() {
     if (!fs.existsSync(this.uploadDir)) {
-      fs.mkdirSync(this.uploadDir, { recursive: true });
+      try {
+        fs.mkdirSync(this.uploadDir, { recursive: true });
+      } catch (err) {
+        console.error('Failed to create upload directory:', err);
+      }
     }
   }
 

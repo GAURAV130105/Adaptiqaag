@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.VERCEL
-  ? path.join(process.cwd(), 'rag_vectors.db')
+  ? '/tmp/rag_vectors.db'
   : path.join(__dirname, '../../rag_vectors.db');
 
 export interface DocumentChunk {
@@ -25,7 +25,27 @@ class VectorDatabase {
   async init() {
     if (this.db) return;
 
-    this.SQL = await initSqlJs();
+    this.SQL = await initSqlJs({
+      locateFile: (file) => {
+        const localPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', file);
+        if (fs.existsSync(localPath)) {
+          return localPath;
+        }
+        return file;
+      }
+    });
+    
+    if (process.env.VERCEL) {
+      const bundledPath = path.join(process.cwd(), 'rag_vectors.db');
+      if (!fs.existsSync(dbPath) && fs.existsSync(bundledPath)) {
+        try {
+          fs.copyFileSync(bundledPath, dbPath);
+          console.log('Copied bundled DB to /tmp/rag_vectors.db');
+        } catch (copyError) {
+          console.error('Failed to copy bundled DB to /tmp:', copyError);
+        }
+      }
+    }
     
     if (fs.existsSync(dbPath)) {
       const fileBuffer = fs.readFileSync(dbPath);
@@ -33,7 +53,11 @@ class VectorDatabase {
     } else {
       this.db = new this.SQL.Database();
       this.initializeSchema();
-      this.save();
+      try {
+        this.save();
+      } catch (saveError) {
+        console.error('Failed to save initialized database:', saveError);
+      }
     }
   }
 
@@ -63,9 +87,13 @@ class VectorDatabase {
   }
 
   private save() {
-    const data = this.db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+    try {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (error) {
+      console.error('Error saving database to file:', error);
+    }
   }
 
   addDocument(id: string, name: string, type: string, size: number): boolean {
