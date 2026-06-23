@@ -147,7 +147,7 @@ class DocumentProcessor {
   async embedAndStoreDocument(doc: ProcessedDocument): Promise<boolean> {
     try {
       // Add document record
-      const added = vectorDb.addDocument(doc.id, doc.name, doc.type, doc.size);
+      const added = await vectorDb.addDocument(doc.id, doc.name, doc.type, doc.size);
       if (!added) {
         throw new Error('Failed to add document to database');
       }
@@ -174,7 +174,7 @@ class DocumentProcessor {
             createdAt: Date.now(),
           };
 
-          const stored = vectorDb.addChunk(chunkRecord);
+          const stored = await vectorDb.addChunk(chunkRecord);
           if (!stored) {
             console.warn(`Failed to store chunk ${i} of ${doc.name}`);
           }
@@ -192,7 +192,7 @@ class DocumentProcessor {
     } catch (error) {
       console.error('Embedding and storage error:', error);
       // Clean up partially added document
-      vectorDb.deleteDocument(doc.id);
+      await vectorDb.deleteDocument(doc.id);
       return false;
     }
   }

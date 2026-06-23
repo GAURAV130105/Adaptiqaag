@@ -123,9 +123,9 @@ app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
 });
 
 // Get documents list
-app.get("/api/documents", (req, res) => {
+app.get("/api/documents", async (req, res) => {
   try {
-    const documents = vectorDb.getDocuments();
+    const documents = await vectorDb.getDocuments();
     res.json({ documents });
   } catch (error) {
     console.error("Get documents error:", error);
@@ -134,10 +134,10 @@ app.get("/api/documents", (req, res) => {
 });
 
 // Delete document endpoint
-app.delete("/api/documents/:docId", (req, res) => {
+app.delete("/api/documents/:docId", async (req, res) => {
   try {
     const { docId } = req.params;
-    const success = vectorDb.deleteDocument(docId);
+    const success = await vectorDb.deleteDocument(docId);
     if (!success) {
       return res.status(500).json({ error: "Failed to delete document" });
     }

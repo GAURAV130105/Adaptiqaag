@@ -21,44 +21,50 @@ export interface DocumentChunk {
 class VectorDatabase {
   private db: any = null;
   private SQL: any = null;
+  private initPromise: Promise<void> | null = null;
 
   async init() {
     if (this.db) return;
+    if (this.initPromise) return this.initPromise;
 
-    this.SQL = await initSqlJs({
-      locateFile: (file) => {
-        const localPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', file);
-        if (fs.existsSync(localPath)) {
-          return localPath;
+    this.initPromise = (async () => {
+      this.SQL = await initSqlJs({
+        locateFile: (file) => {
+          const localPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', file);
+          if (fs.existsSync(localPath)) {
+            return localPath;
+          }
+          return file;
         }
-        return file;
+      });
+      
+      if (process.env.VERCEL) {
+        const bundledPath = path.join(process.cwd(), 'rag_vectors.db');
+        if (!fs.existsSync(dbPath) && fs.existsSync(bundledPath)) {
+          try {
+            fs.copyFileSync(bundledPath, dbPath);
+            console.log('Copied bundled DB to /tmp/rag_vectors.db');
+          } catch (copyError) {
+            console.error('Failed to copy bundled DB to /tmp:', copyError);
+          }
+        }
       }
-    });
-    
-    if (process.env.VERCEL) {
-      const bundledPath = path.join(process.cwd(), 'rag_vectors.db');
-      if (!fs.existsSync(dbPath) && fs.existsSync(bundledPath)) {
+      
+      if (fs.existsSync(dbPath)) {
+        const fileBuffer = fs.readFileSync(dbPath);
+        this.db = new this.SQL.Database(fileBuffer);
+      } else {
+        this.db = new this.SQL.Database();
+        this.initializeSchema();
         try {
-          fs.copyFileSync(bundledPath, dbPath);
-          console.log('Copied bundled DB to /tmp/rag_vectors.db');
-        } catch (copyError) {
-          console.error('Failed to copy bundled DB to /tmp:', copyError);
+          this.save();
+        } catch (saveError) {
+          console.error('Failed to save initialized database:', saveError);
         }
       }
-    }
-    
-    if (fs.existsSync(dbPath)) {
-      const fileBuffer = fs.readFileSync(dbPath);
-      this.db = new this.SQL.Database(fileBuffer);
-    } else {
-      this.db = new this.SQL.Database();
-      this.initializeSchema();
-      try {
-        this.save();
-      } catch (saveError) {
-        console.error('Failed to save initialized database:', saveError);
-      }
-    }
+    })();
+
+    return this.initPromise;
   }
 
   private initializeSchema() {
@@ -96,7 +102,8 @@ class VectorDatabase {
     }
   }
 
-  addDocument(id: string, name: string, type: string, size: number): boolean {
+  async addDocument(id: string, name: string, type: string, size: number): Promise<boolean> {
+    await this.init();
     try {
       const stmt = this.db.prepare(`
         INSERT INTO documents (id, name, type, size, uploadedAt)
@@ -112,7 +119,8 @@ class VectorDatabase {
     }
   }
 
-  addChunk(chunk: DocumentChunk): boolean {
+  async addChunk(chunk: DocumentChunk): Promise<boolean> {
+    await this.init();
     try {
       const stmt = this.db.prepare(`
         INSERT INTO chunks (id, doc_id, doc_name, content, embedding, chunk_index, created_at)
@@ -136,7 +144,8 @@ class VectorDatabase {
     }
   }
 
-  searchByEmbedding(queryEmbedding: number[], topK: number = 5): DocumentChunk[] {
+  async searchByEmbedding(queryEmbedding: number[], topK: number = 5): Promise<DocumentChunk[]> {
+    await this.init();
     try {
       const stmt = this.db.prepare(`
         SELECT id, doc_id, doc_name, content, embedding, chunk_index, created_at
@@ -182,7 +191,8 @@ class VectorDatabase {
     return dotProduct / (magnitudeA * magnitudeB);
   }
 
-  getDocuments(): any[] {
+  async getDocuments(): Promise<any[]> {
+    await this.init();
     try {
       const stmt = this.db.prepare('SELECT * FROM documents ORDER BY uploadedAt DESC');
       const docs: any[] = [];
@@ -197,7 +207,8 @@ class VectorDatabase {
     }
   }
 
-  deleteDocument(docId: string): boolean {
+  async deleteDocument(docId: string): Promise<boolean> {
+    await this.init();
     try {
       this.db.run('BEGIN TRANSACTION');
       const deleteChunks = this.db.prepare('DELETE FROM chunks WHERE doc_id = ?');
@@ -216,7 +227,8 @@ class VectorDatabase {
     }
   }
 
-  getChunksByDocId(docId: string): DocumentChunk[] {
+  async getChunksByDocId(docId: string): Promise<DocumentChunk[]> {
+    await this.init();
     try {
       const stmt = this.db.prepare(`
         SELECT id, doc_id, doc_name, content, embedding, chunk_index, created_at
@@ -246,7 +258,8 @@ class VectorDatabase {
     }
   }
 
-  close(): void {
+  async close(): Promise<void> {
+    await this.init();
     if (this.db) {
       this.save();
       this.db.close();
@@ -255,5 +268,4 @@ class VectorDatabase {
 }
 
 const vectorDbInstance = new VectorDatabase();
-await vectorDbInstance.init();
 export const vectorDb = vectorDbInstance;
