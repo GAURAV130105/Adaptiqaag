@@ -15,17 +15,11 @@ interface ProcessedDocument {
 }
 
 class DocumentProcessor {
-  private uploadDir = process.env.VERCEL
-    ? '/tmp/uploads'
-    : path.join(process.cwd(), 'uploads');
+  private uploadDir = path.join(process.cwd(), 'uploads');
 
   constructor() {
     if (!fs.existsSync(this.uploadDir)) {
-      try {
-        fs.mkdirSync(this.uploadDir, { recursive: true });
-      } catch (err) {
-        console.error('Failed to create upload directory:', err);
-      }
+      fs.mkdirSync(this.uploadDir, { recursive: true });
     }
   }
 
@@ -147,7 +141,7 @@ class DocumentProcessor {
   async embedAndStoreDocument(doc: ProcessedDocument): Promise<boolean> {
     try {
       // Add document record
-      const added = await vectorDb.addDocument(doc.id, doc.name, doc.type, doc.size);
+      const added = vectorDb.addDocument(doc.id, doc.name, doc.type, doc.size);
       if (!added) {
         throw new Error('Failed to add document to database');
       }
@@ -174,7 +168,7 @@ class DocumentProcessor {
             createdAt: Date.now(),
           };
 
-          const stored = await vectorDb.addChunk(chunkRecord);
+          const stored = vectorDb.addChunk(chunkRecord);
           if (!stored) {
             console.warn(`Failed to store chunk ${i} of ${doc.name}`);
           }
@@ -192,7 +186,7 @@ class DocumentProcessor {
     } catch (error) {
       console.error('Embedding and storage error:', error);
       // Clean up partially added document
-      await vectorDb.deleteDocument(doc.id);
+      vectorDb.deleteDocument(doc.id);
       return false;
     }
   }

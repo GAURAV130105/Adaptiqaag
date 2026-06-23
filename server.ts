@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
-import fs from "fs";
 import path from "path";
+import { createServer as createViteServer } from "vite";
 import multer from "multer";
 import { ragService } from "./src/services/ragService.ts";
 import { documentProcessor } from "./src/services/documentProcessor.ts";
@@ -10,21 +10,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const uploadDir = process.env.VERCEL
-  ? "/tmp/uploads"
-  : path.join(__dirname, "uploads");
-
-if (!fs.existsSync(uploadDir)) {
-  try {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  } catch (err) {
-    console.error("Failed to create upload directory:", err);
-  }
-}
-
 // Multer upload config with 10MB limit and PDF/TXT/DOCX file filter
 const upload = multer({
-  dest: uploadDir,
+  dest: "uploads/",
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
@@ -47,7 +35,7 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
-app.use(express.static(uploadDir));
+app.use(express.static(path.join(__dirname, "uploads")));
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -123,9 +111,9 @@ app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
 });
 
 // Get documents list
-app.get("/api/documents", async (req, res) => {
+app.get("/api/documents", (req, res) => {
   try {
-    const documents = await vectorDb.getDocuments();
+    const documents = vectorDb.getDocuments();
     res.json({ documents });
   } catch (error) {
     console.error("Get documents error:", error);
@@ -134,10 +122,10 @@ app.get("/api/documents", async (req, res) => {
 });
 
 // Delete document endpoint
-app.delete("/api/documents/:docId", async (req, res) => {
+app.delete("/api/documents/:docId", (req, res) => {
   try {
     const { docId } = req.params;
-    const success = await vectorDb.deleteDocument(docId);
+    const success = vectorDb.deleteDocument(docId);
     if (!success) {
       return res.status(500).json({ error: "Failed to delete document" });
     }
@@ -167,24 +155,20 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 if (!process.env.VERCEL) {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    import("vite").then(({ createServer: createViteServer }) => {
-      createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      }).then((vite) => {
-        app.use(vite.middlewares);
-        
-        const server = app.listen(PORT, "0.0.0.0", () => {
-          console.log(`Server running on http://localhost:${PORT}`);
-        });
-        server.on("error", (err) => {
-          console.error("Express Server Error:", err);
-        });
-      }).catch((err) => {
-        console.error("Failed to create Vite server:", err);
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    }).then((vite) => {
+      app.use(vite.middlewares);
+      
+      const server = app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
+      server.on("error", (err) => {
+        console.error("Express Server Error:", err);
       });
     }).catch((err) => {
-      console.error("Failed to dynamically import Vite:", err);
+      console.error("Failed to create Vite server:", err);
     });
   } else {
     // Local production execution

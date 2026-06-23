@@ -79,7 +79,7 @@ class RAGService {
       }
 
       // Search for relevant chunks
-      const relevantChunks = await vectorDb.searchByEmbedding(queryEmbedding, 5);
+      const relevantChunks = vectorDb.searchByEmbedding(queryEmbedding, 5);
 
       // Build context and system prompt (dynamic fallback to general chat if no chunks exist)
       const hasContext = relevantChunks.length > 0;
